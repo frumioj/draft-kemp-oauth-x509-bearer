@@ -1,0 +1,4 @@
+# Automatically generated CODEOWNERS
+# Regenerate with `make update-codeowners`
+draft-kemp-oauth-x509-bearer.md unstable.pseudonym@stabledomain.net
+draft-todo-yourname-protocol.md unstable.pseudonym@stabledomain.net
