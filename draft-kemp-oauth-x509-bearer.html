@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="en" class="Internet-Draft">
+<head>
+<meta charset="utf-8">
+<meta content="Common,Latin" name="scripts">
+<meta content="initial-scale=1.0" name="viewport">
+<title>X.509 Certificate Bearer Profile for OAuth 2.0 Client Authentication and Authorization Grants</title>
+<meta content="John Kemp" name="author">
+<meta content="
+       This specification defines the use of an X.509 certificate, issued under a
+Public Key Infrastructure (PKI), as a means for requesting an OAuth 2.0
+access token as well as for client authentication, profiling the Assertion
+Framework for OAuth 2.0 Client Authentication and Authorization Grants
+( ) in a manner analogous to the JSON Web Token (JWT) Bearer
+Token profile ( ) and the SAML 2.0 Bearer Assertion profile
+( ). It is motivated primarily by workload identity systems,
+such as SPIFFE/SPIRE and Athenz, that already issue software workloads
+short-lived X.509 certificates for mutual TLS, and that benefit from
+using those same certificates directly with OAuth 2.0. Unlike a bare
+bearer credential, this profile requires that possession of the private
+key corresponding to the certificate's public key be corroborated as part
+of every use, so that a copy of the certificate alone -- which is not a
+secret -- is never sufficient to obtain a grant or authenticate a client. 
+    " name="description">
+<meta content="xml2rfc 3.34.0" name="generator">
+<meta content="oauth" name="keyword">
+<meta content="x.509" name="keyword">
+<meta content="pki" name="keyword">
+<meta content="client authentication" name="keyword">
+<meta content="assertion" name="keyword">
+<meta content="bearer token" name="keyword">
+<meta content="draft-kemp-oauth-x509-bearer-latest" name="ietf.draft">
+<!-- Generator version information:
+  xml2rfc 3.34.0
+    Python 3.14.7
+    ConfigArgParse 1.7.5
+    google-i18n-address 3.1.1
+    intervaltree 3.2.1
+    Jinja2 3.1.6
+    lxml 6.1.1
+    natsort 8.4.0
+    platformdirs 4.11.3
+    pycountry 24.6.1
+    PyYAML 6.0.3
+    requests 2.33.1
+    wcwidth 0.8.2
+-->
+<link href="draft-kemp-oauth-x509-bearer.xml" rel="alternate" type="application/rfc+xml">
+<link href="#copyright" rel="license">
+<style type="text/css">@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Italic'), local('Lora-Italic'), url('https://martinthomson.github.io/rfc-css/fonts/lora-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Lora Regular'), local('Lora-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/lora-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-cyrillic.woff2') format('woff2');
+  unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Lora Bold'), local('Lora-Bold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-bold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Lora';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Lora SemiBold'), local('Lora-SemiBold'), url('https://martinthomson.github.io/rfc-css/fonts/lora-semibold-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Oxygen Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Oxygen Mono'), local('OxygenMono-Regular'), url('https://martinthomson.github.io/rfc-css/fonts/oxygenmono-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: italic;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-italic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-greek.woff2') format('woff2');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans Semi Condensed';
+  font-style: normal;
+  font-weight: 1 1000;
+  src: url('https://martinthomson.github.io/rfc-css/fonts/sofiasanssemicondensed-regular-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+  --background-color: #fff;
+  --text-color: #222;
+  --title-color: #191919;
+  --link-color: #2a6496;
+  --highlight-color: #f9f9f9;
+  --line-color: #eee;
+  --pilcrow-weak: #ddd;
+  --pilcrow-strong: #bbb;
+  --small-font-size: 14.5px;
+  --font-mono: 'Oxygen Mono', monospace;
+  --font-title: "Sofia Sans Semi Condensed", sans-serif;
+  scrollbar-color: #bbb #eee;
+}
+body {
+  max-width: 600px;
+  margin: 75px auto;
+  padding: 0 5px;
+  color: var(--text-color);
+  background-color: var(--background-color);
+  font: 16px/22px "Lora", serif;
+  scroll-behavior: smooth;
+}
+
+.ears {
+  display: none;
+}
+
+/* headings */
+section {
+  clear: both;
+}
+.section-number {
+  padding-right: 0.5em;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 680;
+  margin: 0.8em 0 0.3em;
+  font-size-adjust: 0.5;
+  color: var(--title-color);
+}
+h1 {
+  &#title {
+    font-size: 32px;
+    line-height: 40px;
+    clear: both;
+    margin: 1.5em 0 0.2em;
+  }
+  &#rfcnum {
+    margin: 1.5em 0 0.2em;
+    & + h1#title {
+      margin: 0.2em 0;
+    }
+  }
+}
+
+h1, h2, h3 {
+  font-size: 22px;
+  line-height: 27px;
+}
+h4, h5, h6 {
+  font-size: 20px;
+  line-height: 24px;
+}
+
+/* general structure */
+.author {
+  padding-bottom: 0.3em;
+  vertical-align: top;
+}
+#abstract+p {
+  font-size: 18px;
+  line-height: 24px;
+  & code, & samp, & tt {
+    font-size: 16px;
+    line-height: 0;
+  }
+}
+
+p {
+  padding: 0;
+  margin: 0.5em 0;
+  text-align: left;
+}
+div {
+  margin: 0;
+}
+.alignRight {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    margin: 0;
+    float: right;
+    clear: both;
+  }
+  & > *:nth-child(2) {
+    clear: both;
+    display: block;
+    border: none;
+  }
+}
+svg {
+  display: block;
+  /* font-family isn't space-separated, but =~ will have to do */
+  &[font-family~="monospace" i], & [font-family~="monospace" i] {
+    font-family: var(--font-mono);
+  }
+}
+.alignCenter {
+  margin: 1em 0;
+  &.art-text {
+    background-color: var(--highlight-color);
+    border: 1px solid var(--line-color);
+    border-radius: 3px;
+    padding: 0.5em 1em 0;
+    margin-bottom: 0.5em;
+    & pre {
+      padding: 0;
+      width: auto;
+    }
+  }
+  & > *:first-child {
+    border: none;
+    /* this isn't optimal, but it's an existence proof.  PrinceXML doesn't
+       support flexbox yet.
+    */
+    display: table;
+    margin: 0 auto;
+  }
+}
+
+/* lists */
+ol, ul {
+  padding: 0;
+  margin: 0 0 0.5em 2em;
+  & :is(ol, ul) {
+    margin-left: 1em;
+  }
+}
+li {
+  margin: 0 0 0.25em 0;
+}
+ul.empty, .ulEmpty {
+  list-style-type: none;
+  & li {
+    margin-top: 0.5em;
+  }
+}
+:is(ul, ol).compact, .ulCompact, .olCompact {
+  margin: 0 0 0 2em;
+  & li {
+    margin: 0;
+    & :first-child { margin-top: 0; }
+    & :last-child { margin-bottom: 0; }
+  }
+}
+
+/* definition lists */
+dl {
+  clear: left;
+  --indent: 3ch;
+  /* --indent: attr(indent ch); not supported in any browser, but we can dream */
+  &.olPercent {
+    --indent: 5ch;
+    & > dt {
+      min-width: calc(var(--indent) - 2ch);
+      float: none;
+    }
+  }
+
+  dl > dd > & {
+    margin-top: 0.5em;
+    margin-bottom: 0;
+  }
+
+  &:not(.dlNewline) > dt {
+    float: left;
+    margin-right: 2ch;
+    min-width: 8ch;
+  }
+  & > dd {
+    margin-bottom: .8em;
+    margin-left: var(--indent) !important; /* stupid element overrides */
+    min-height: 2ex;
+  }
+}
+:is(dl.compact, .dlCompact) > dd {
+  margin-bottom: 0;
+  & > :is(:first-child, .break:first-child + *) {
+    margin-top: 0;
+  }
+  & > :is(:last-child) {
+    margin-bottom: 0;
+  }
+}
+:is(dd, span).break {
+  display: none;
+}
+
+/* links */
+a {
+  text-decoration: none;
+  &[href] {
+    color: var(--link-color);
+    &:hover { text-decoration: underline; }
+    &.selfRef {
+      color: var(--text-color);
+      &:hover {
+        text-decoration: none;
+        background-color: var(--highlight-color);
+      }
+    }
+  }
+}
+.iref + a[href].internal {
+  color: var(--text-color);
+}
+a.xref:is(.cite, .auto), :is(#status-of-memo, #copyright) a {
+  white-space: nowrap;
+}
+
+/* Figures */
+tt, code, pre {
+  background-color: var(--highlight-color);
+  font: 14px/22px var(--font-mono);
+}
+tt, code {
+  /* changing the font for inline elements leads to different ascender
+     and descender heights; as we want to retain baseline alignment,
+     remove leading to avoid altering the final height of lines
+     note: this fails if these blocks take an entire line,
+     a different solution would be great */
+  line-height: 0;
+}
+:is(h1, h2, h3, h4, h5, h6) :is(tt, code) {
+  font-size: 84%;
+}
+pre {
+  border: 1px solid var(--line-color);
+  font-size: 13.5px;
+  line-height: 16px;
+  letter-spacing: -0.2px;
+  margin: 5px;
+  padding: 5px;
+}
+img {
+  max-width: 100%;
+}
+figure {
+  margin: 0.5em 0;
+  padding: 0;
+  & blockquote {
+    margin: 0.8em 0.4em 0.4em;
+  }
+}
+figcaption, caption {
+  font-style: italic;
+  margin: 0.5em 1.5em;
+  text-align: left;
+  caption-side: bottom;
+}
+@media screen {
+  /* Auto-collapse boilerplate. */
+  :is(#status-of-memo, #copyright) {
+    & p {
+      margin: -2px 0;
+      max-height: 0;
+      transition: max-height 2s ease, margin 0.5s ease 0.5s;
+      overflow: hidden;
+    }
+    &:hover p,
+    & h2:target ~ p {
+      margin: 0.5em 0;
+      max-height: 500px;
+      overflow: auto;
+    }
+  }
+  pre, svg {
+    display: inline-block;
+    /* In the horizontal direction, sometimes people make over-sized figures.
+       Scrollbars for those is therefore necessary: auto adds them as necessary..
+       In the vertical direction, the line-height can combine with the font
+       asender/descender height to produce scrollbars: hidden avoids that. */
+    overflow: auto hidden;
+  }
+  pre {
+    max-width: 100%;
+    width: calc(100% - 22px - 1em);
+  }
+  svg {
+    max-width: calc(100% - 22px - 1em);
+  }
+  figure pre {
+    display: block;
+    width: calc(100% - 25px);
+  }
+  :is(pre, svg) + .pilcrow {
+    display: inline-block;
+    vertical-align: text-bottom;
+    padding-bottom: 8px;
+  }
+}
+
+/* aside, blockquote */
+aside, blockquote {
+  margin-left: 0;
+  padding: 0 2em;
+  font-style: italic;
+}
+blockquote {
+  margin: 1em 0;
+  border-left: 2px var(--pilcrow-strong) solid;
+}
+cite {
+  display: block;
+  text-align: right;
+  font-style: italic;
+}
+
+/* tables */
+table {
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  &.right { margin-left: auto; }
+  &.center { margin-left: auto; margin-right: auto; }
+  &.left { margin-right: auto; }
+  & .text-left { text-align: left; }
+  & .text-center { text-align: center; }
+  & .text-right { text-align: right; }
+  & caption {
+    margin: 0;
+    padding: 3px 0 3px 1em;
+  }
+  & p { margin: 0; }
+}
+
+thead, tbody {
+  border: 1px solid var(--line-color);
+}
+th, td {
+  text-align: left;
+  vertical-align: top;
+  padding: 5px 10px;
+}
+th {
+  background-color: var(--line-color);
+}
+:is(tr:nth-child(2n), thead+tbody > tr:nth-child(2n+1)) > td {
+  background-color: var(--background-color);
+}
+:is(tr:nth-child(2n+1), thead+tbody > tr:nth-child(2n)) > td {
+  background-color: var(--highlight-color);
+}
+
+/* pilcrow */
+a.pilcrow {
+  margin-left: 3px;
+  opacity: 0.2;
+  user-select: none;
+  &[href] {
+    color: var(--pilcrow-weak);
+    &:hover { text-decoration: none; }
+  }
+  @media not print {
+    :hover > &, &:focus {
+      opacity: 1;
+    }
+    &[href]:hover {
+      color: var(--pilcrow-strong);
+      background-color: transparent;
+    }
+  }
+  @media print {
+    display: none;
+  }
+}
+
+/* misc */
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-color);
+}
+.bcp14 {
+  font-variant: small-caps;
+  font-weight: 600;
+  font-size: var(--small-font-size);
+}
+.role {
+  font-variant: all-small-caps;
+}
+sub, sup {
+  line-height: 1;
+  font-size: 80%;
+}
+
+/* info block */
+#identifiers {
+  margin: 0;
+  font-size: var(--small-font-size);
+  line-height: 18px;
+  --identifier-width: 15ch;
+  & dt {
+    width: var(--identifier-width);
+    min-width: var(--identifier-width);
+    clear: left;
+    float: left;
+    text-align: right;
+    margin-right: 1ch;
+  }
+  & dd {
+    margin: 0;
+    margin-left: calc(1em + var(--identifier-width)) !important;
+    min-width: 5em;
+  }
+  & .authors {
+    & .author {
+      display: inline-block;
+      margin-right: 1.5em;
+    }
+    & .org {
+      font-style: italic;
+    }
+  }
+}
+
+/* The prepared/rendered info at the very bottom of the page */
+.docInfo {
+  color: #999;
+  font-size: 0.9em;
+  font-style: italic;
+  margin-top: 2em;
+  & .prepared {
+    float: right;
+  }
+}
+
+/* table of contents */
+#toc {
+  padding: 0.75em 0 2em 0;
+  margin-bottom: 1em;
+
+  & nav {
+    & ul {
+      margin: 0 0.5em 0 0;
+      padding: 0;
+      list-style: none;
+    }
+    & li {
+      line-height: 1.3em;
+      margin: 2px 0;
+      padding-left: 1.2em;
+      text-indent: -1.2em;
+    }
+  }
+  & a.xref {
+    white-space: normal;
+  }
+}
+
+.references {
+  & > dt {
+    text-align: right;
+    font-weight: bold;
+    min-width: 10ch;
+    margin-right: 1.5ch;
+    &:target::before {
+      content: "⇒";
+      margin: 0 10px 0 -25px;
+    }
+  }
+  & > dd {
+    margin-left: 12ch !important;
+    overflow: visible;
+    & .refInstance {
+      margin-bottom: 0.8em;
+    }
+    & .ascii {
+      margin-bottom: 0.25em;
+    }
+  }
+}
+
+#rfc\.index\.index + ul {
+  margin-left: 0;
+}
+
+/* authors */
+address.vcard {
+  font-style: normal;
+  max-width: 20em;
+  margin: 1em auto 1em 0;
+
+  & .nameRole {
+    font-weight: 700;
+    margin-left: 0;
+  }
+  & .label {
+    margin: 0.5em 0;
+  }
+  & .type {
+    display: none;
+  }
+  & .alternative-contact {
+    margin: 0.5em 0 0.25em 0;
+  }
+  & .non-ascii {
+    margin: 0 0 0 2em;
+  }
+  & div.left {
+    text-align: left;
+  }
+  & div.right {
+    text-align: right;
+  }
+}
+
+hr.addr {
+  border-top: 1px dashed;
+  margin: 0;
+  color: #ddd;
+  max-width: calc(100% - 16px);
+}
+@media (min-width: 500px) {
+  #authors-addresses {
+    & > section {
+      column-count: 2;
+      column-gap: 20px;
+    }
+    & > section > h2 {
+      column-span: all;
+    }
+    /* hack for break-inside: avoid-column */
+    & address {
+      display: inline-block;
+      break-inside: avoid-column;
+    }
+  }
+}
+
+/* Comments */
+.rfcEditorRemove {
+  & p:first-of-type {
+    font-style: italic;
+  }
+}
+.cref {
+  background-color: rgba(249, 232, 105, 0.3);
+  padding: 2px 4px;
+}
+.crefSource {
+  font-style: italic;
+}
+
+@media screen {
+  #toc {
+    & nav {
+      font-family: var(--font-title);
+      font-weight: 360;
+      & > ul { margin-bottom: 2em; }
+      & ul {
+        margin: 0 0 0 4px;
+        & :is(p, li) {
+          margin: 2px 0;
+        }
+      }
+    }
+    & a.toplink {
+      float: right;
+    }
+  }
+}
+@media not screen {
+  #toc a.toplink {
+    display: none;
+  }
+}
+
+
+/* TOC layout for smaller screens */
+@media screen and (max-width: 929px) {
+  #toc {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    right: 0;
+    padding: 1px 0 0 0;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    opacity: 0.6;
+    & h2 {
+      margin: 0;
+      padding: 2px 0 2px 6px;
+      padding-right: 1em;
+      font-size: 18px;
+      line-height: 24px;
+      min-width: 190px;
+      text-align: right;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      &::before { /* css hamburger */
+        float: right;
+        position: relative;
+        width: 1em;
+        height: 1px;
+        left: -164px;
+        margin: 8px 0 0 0;
+        background: white none repeat scroll 0 0;
+        box-shadow: 0 4px 0 0 white, 0 8px 0 0 white;
+        content: "";
+      }
+    }
+    & nav {
+      display: none;
+      background-color: var(--background-color);
+      padding: 0.5em 1em 1em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      height: calc(100vh - 48px);
+      border-left: 1px solid #ddd;
+    }
+    &.active {
+      opacity: 1;
+      & nav { display: block; }
+    }
+    /* Make the collapsed ToC header render white on gray also when it's a link */
+    & h2 a,
+    & h2 a:is(:link, :focus, :hover),
+    & a.toplink,
+    & a.toplink:hover {
+      color: white;
+      background-color: #444;
+      text-decoration: none;
+    }
+    & a.toplink {
+      margin: 2px 0.5em 0;
+    }
+  }
+}
+
+/* TOC layout for wide screens */
+@media screen and (min-width: 930px) {
+  body {
+    padding-right: 360px;
+    padding-right: calc(min(180px + 20%, 500px));
+  }
+  #toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 480px);
+    width: 312px;
+    margin: 0;
+    padding: 0;
+    z-index: 1;
+    & h2 {
+      margin: 0;
+      padding: 0.25em 1em 1em 0;
+    }
+    & nav {
+      display: block;
+      height: calc(90vh - 84px);
+      bottom: 0;
+      padding: 0.5em 0 2em;
+      overflow: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+    & a.toplink {
+      margin: 8px 0.5em 0;
+    }
+  }
+  img { /* future proofing */
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+/* pagination */
+@media print {
+  body {
+    width: 100%;
+  }
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+  #n-copyright-notice {
+    border-bottom: none;
+  }
+  #toc {
+    page-break-before: always;
+    border-top: none;
+    padding-top: 0;
+  }
+  #n-introduction {
+    page-break-before: always;
+  }
+  figure, pre, .vcard {
+    page-break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+  }
+  :is(h2, h3, h4, h5, h6)+*, dd {
+    page-break-before: avoid;
+  }
+  pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-size: 10pt;
+  }
+  table {
+    border: 1px solid #ddd;
+  }
+  td {
+    border-top: 1px solid #ddd;
+  }
+}
+
+@page :first {
+  padding-top: 0;
+  @top-left {
+    content: normal;
+    border: none;
+  }
+  @top-center {
+    content: normal;
+    border: none;
+  }
+  @top-right {
+    content: normal;
+    border: none;
+  }
+}
+
+@page {
+  size: A4;
+  margin-bottom: 45mm;
+  padding-top: 20px;
+}
+
+/* Dark mode. */
+@media (prefers-color-scheme: dark) {
+:root {
+  --background-color: #121212;
+  --text-color: #f0f0f0;
+  --title-color: #fff;
+  --link-color: #4da4f0;
+  --highlight-color: #282828;
+  --line-color: #444;
+  --pilcrow-weak: #444;
+  --pilcrow-strong: #666;
+  scrollbar-color: #777 #333;
+}
+}
+
+/* SVG Trick: a prefix match works because only black and white are allowed */
+svg {
+  & :is([stroke="black"], [stroke^="#000"]) {
+    stroke: var(--text-color);
+  }
+  & :is([stroke="white"], [stroke^="#fff"]) {
+    stroke: var(--background-color);
+  }
+  & :is([fill="black"], [fill^="#000"], :not([fill])) {
+    fill: var(--text-color);
+  }
+  & :is([fill="white"], [fill^="#fff"]) {
+    fill: var(--background-color);
+  }
+}
+</style>
+
+</head>
+<body class="xml2rfc">
+<table class="ears">
+<thead><tr>
+<td class="left">Internet-Draft</td>
+<td class="center">OAuth X.509 Bearer</td>
+<td class="right">August 2026</td>
+</tr></thead>
+<tfoot><tr>
+<td class="left">Kemp</td>
+<td class="center">Expires 21 February 2027</td>
+<td class="right">[Page]</td>
+</tr></tfoot>
+</table>
+<div id="external-metadata" class="document-information"></div>
+<div id="internal-metadata" class="document-information">
+<dl id="identifiers">
+<dt class="label-workgroup">Workgroup:</dt>
+<dd class="workgroup">Web Authorization Protocol</dd>
+<dt class="label-internet-draft">Internet-Draft:</dt>
+<dd class="internet-draft">draft-kemp-oauth-x509-bearer-latest</dd>
+<dt class="label-published">Published:</dt>
+<dd class="published">
+<time datetime="2026-08-20" class="published">20 August 2026</time>
+    </dd>
+<dt class="label-intended-status">Intended Status:</dt>
+<dd class="intended-status">Standards Track</dd>
+<dt class="label-expires">Expires:</dt>
+<dd class="expires"><time datetime="2027-02-21">21 February 2027</time></dd>
+<dt class="label-authors">Author:</dt>
+<dd class="authors">
+<div class="author">
+      <div class="author-name">J. Kemp</div>
+<div class="org">Your Organization Here</div>
+</div>
+</dd>
+</dl>
+</div>
+<h1 id="title">X.509 Certificate Bearer Profile for OAuth 2.0 Client Authentication and Authorization Grants</h1>
+<section id="section-abstract">
+      <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
+<p id="section-abstract-1">This specification defines the use of an X.509 certificate, issued under a
+Public Key Infrastructure (PKI), as a means for requesting an OAuth 2.0
+access token as well as for client authentication, profiling the Assertion
+Framework for OAuth 2.0 Client Authentication and Authorization Grants
+(<span>[<a href="#RFC7521" class="cite xref">RFC7521</a>]</span>) in a manner analogous to the JSON Web Token (JWT) Bearer
+Token profile (<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>) and the SAML 2.0 Bearer Assertion profile
+(<span>[<a href="#RFC7522" class="cite xref">RFC7522</a>]</span>). It is motivated primarily by workload identity systems,
+such as SPIFFE/SPIRE and Athenz, that already issue software workloads
+short-lived X.509 certificates for mutual TLS, and that benefit from
+using those same certificates directly with OAuth 2.0. Unlike a bare
+bearer credential, this profile requires that possession of the private
+key corresponding to the certificate's public key be corroborated as part
+of every use, so that a copy of the certificate alone -- which is not a
+secret -- is never sufficient to obtain a grant or authenticate a client.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-about-this-document">
+<a href="#name-about-this-document" class="section-name selfRef">About This Document</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">
+        The latest revision of this draft can be found at <span><a href="https://frumioj.github.io/draft-kemp-oauth-x509-bearer/draft-kemp-oauth-x509-bearer.html">https://frumioj.github.io/draft-kemp-oauth-x509-bearer/draft-kemp-oauth-x509-bearer.html</a></span>.
+        Status information for this document may be found at <span><a href="https://datatracker.ietf.org/doc/draft-kemp-oauth-x509-bearer/">https://datatracker.ietf.org/doc/draft-kemp-oauth-x509-bearer/</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
+<p id="section-note.1-3">
+        Discussion of this document takes place on the
+        Web Authorization Protocol Working Group mailing list (<span><a href="mailto:oauth@ietf.org">mailto:oauth@ietf.org</a></span>),
+        which is archived at <span><a href="https://mailarchive.ietf.org/arch/browse/oauth/">https://mailarchive.ietf.org/arch/browse/oauth/</a></span>.
+        Subscribe at <span><a href="https://www.ietf.org/mailman/listinfo/oauth/">https://www.ietf.org/mailman/listinfo/oauth/</a></span>.<a href="#section-note.1-3" class="pilcrow">¶</a></p>
+<p id="section-note.1-4">Source for this draft and an issue tracker can be found at
+        <span><a href="https://github.com/frumioj/draft-kemp-oauth-x509-bearer">https://github.com/frumioj/draft-kemp-oauth-x509-bearer</a></span>.<a href="#section-note.1-4" class="pilcrow">¶</a></p>
+</section>
+<div id="status-of-memo">
+<section id="section-boilerplate.1">
+        <h2 id="name-status-of-this-memo">
+<a href="#name-status-of-this-memo" class="section-name selfRef">Status of This Memo</a>
+        </h2>
+<p id="section-boilerplate.1-1">
+        This Internet-Draft is submitted in full conformance with the
+        provisions of BCP 78 and BCP 79.<a href="#section-boilerplate.1-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-2">
+        Internet-Drafts are working documents of the Internet Engineering Task
+        Force (IETF). Note that other groups may also distribute working
+        documents as Internet-Drafts. The list of current Internet-Drafts is
+        at <span><a href="https://datatracker.ietf.org/drafts/current/">https://datatracker.ietf.org/drafts/current/</a></span>.<a href="#section-boilerplate.1-2" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-3">
+        Internet-Drafts are draft documents valid for a maximum of six months
+        and may be updated, replaced, or obsoleted by other documents at any
+        time. It is inappropriate to use Internet-Drafts as reference
+        material or to cite them other than as "work in progress."<a href="#section-boilerplate.1-3" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.1-4">
+        This Internet-Draft will expire on 21 February 2027.<a href="#section-boilerplate.1-4" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="copyright">
+<section id="section-boilerplate.2">
+        <h2 id="name-copyright-notice">
+<a href="#name-copyright-notice" class="section-name selfRef">Copyright Notice</a>
+        </h2>
+<p id="section-boilerplate.2-1">
+            Copyright (c) 2026 IETF Trust and the persons identified as the
+            document authors. All rights reserved.<a href="#section-boilerplate.2-1" class="pilcrow">¶</a></p>
+<p id="section-boilerplate.2-2">
+            This document is subject to BCP 78 and the IETF Trust's Legal
+            Provisions Relating to IETF Documents
+            (<span><a href="https://trustee.ietf.org/license-info">https://trustee.ietf.org/license-info</a></span>) in effect on the date of
+            publication of this document. Please review these documents
+            carefully, as they describe your rights and restrictions with
+            respect to this document. Code Components extracted from this
+            document must include Revised BSD License text as described in
+            Section 4.e of the Trust Legal Provisions and are provided without
+            warranty as described in the Revised BSD License.<a href="#section-boilerplate.2-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="toc">
+<section id="section-toc.1">
+        <a href="#" onclick="scroll(0,0)" class="toplink">▲</a><h2 id="name-table-of-contents">
+<a href="#name-table-of-contents" class="section-name selfRef">Table of Contents</a>
+        </h2>
+<nav class="toc"><ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1">
+            <p id="section-toc.1-1.1.1" class="keepWithNext"><a href="#section-1" class="auto internal xref">1</a>.  <a href="#name-introduction" class="internal xref">Introduction</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.1">
+                <p id="section-toc.1-1.1.2.1.1" class="keepWithNext"><a href="#section-1.1" class="auto internal xref">1.1</a>.  <a href="#name-notational-conventions" class="internal xref">Notational Conventions</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.1.2.2">
+                <p id="section-toc.1-1.1.2.2.1" class="keepWithNext"><a href="#section-1.2" class="auto internal xref">1.2</a>.  <a href="#name-terminology" class="internal xref">Terminology</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2">
+            <p id="section-toc.1-1.2.1"><a href="#section-2" class="auto internal xref">2</a>.  <a href="#name-http-parameter-bindings-for" class="internal xref">HTTP Parameter Bindings for Transporting X.509 Certificate Assertions</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.1">
+                <p id="section-toc.1-1.2.2.1.1"><a href="#section-2.1" class="auto internal xref">2.1</a>.  <a href="#name-using-x509-certificates-as-" class="internal xref">Using X.509 Certificates as Authorization Grants</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.2">
+                <p id="section-toc.1-1.2.2.2.1"><a href="#section-2.2" class="auto internal xref">2.2</a>.  <a href="#name-using-x509-certificates-for" class="internal xref">Using X.509 Certificates for Client Authentication</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.2.2.3">
+                <p id="section-toc.1-1.2.2.3.1"><a href="#section-2.3" class="auto internal xref">2.3</a>.  <a href="#name-referencing-the-certificate" class="internal xref">Referencing the Certificate Presented for Mutual TLS</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3">
+            <p id="section-toc.1-1.3.1"><a href="#section-3" class="auto internal xref">3</a>.  <a href="#name-x509-certificate-format-and" class="internal xref">X.509 Certificate Format and Processing Requirements</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.1">
+                <p id="section-toc.1-1.3.2.1.1"><a href="#section-3.1" class="auto internal xref">3.1</a>.  <a href="#name-authorization-grant-process" class="internal xref">Authorization Grant Processing</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.2">
+                <p id="section-toc.1-1.3.2.2.1"><a href="#section-3.2" class="auto internal xref">3.2</a>.  <a href="#name-client-authentication-proce" class="internal xref">Client Authentication Processing</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.3.2.3">
+                <p id="section-toc.1-1.3.2.3.1"><a href="#section-3.3" class="auto internal xref">3.3</a>.  <a href="#name-certificate-bound-access-to" class="internal xref">Certificate-Bound Access Tokens</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4">
+            <p id="section-toc.1-1.4.1"><a href="#section-4" class="auto internal xref">4</a>.  <a href="#name-authorization-grant-example" class="internal xref">Authorization Grant Example</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.5">
+            <p id="section-toc.1-1.5.1"><a href="#section-5" class="auto internal xref">5</a>.  <a href="#name-interoperability-considerat" class="internal xref">Interoperability Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.6">
+            <p id="section-toc.1-1.6.1"><a href="#section-6" class="auto internal xref">6</a>.  <a href="#name-security-considerations" class="internal xref">Security Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.7">
+            <p id="section-toc.1-1.7.1"><a href="#section-7" class="auto internal xref">7</a>.  <a href="#name-privacy-considerations" class="internal xref">Privacy Considerations</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8">
+            <p id="section-toc.1-1.8.1"><a href="#section-8" class="auto internal xref">8</a>.  <a href="#name-iana-considerations" class="internal xref">IANA Considerations</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.1">
+                <p id="section-toc.1-1.8.2.1.1"><a href="#section-8.1" class="auto internal xref">8.1</a>.  <a href="#name-sub-namespace-registration-" class="internal xref">Sub-Namespace Registration of urn:ietf:params:oauth:grant-type:x509-bearer</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.8.2.2">
+                <p id="section-toc.1-1.8.2.2.1"><a href="#section-8.2" class="auto internal xref">8.2</a>.  <a href="#name-sub-namespace-registration-o" class="internal xref">Sub-Namespace Registration of urn:ietf:params:oauth:client-assertion-type:x509-bearer</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9">
+            <p id="section-toc.1-1.9.1"><a href="#section-9" class="auto internal xref">9</a>.  <a href="#name-references" class="internal xref">References</a></p>
+<ul class="compact toc ulBare ulEmpty">
+<li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.1">
+                <p id="section-toc.1-1.9.2.1.1"><a href="#section-9.1" class="auto internal xref">9.1</a>.  <a href="#name-normative-references" class="internal xref">Normative References</a></p>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.2">
+                <p id="section-toc.1-1.9.2.2.1"><a href="#section-9.2" class="auto internal xref">9.2</a>.  <a href="#name-informative-references" class="internal xref">Informative References</a></p>
+</li>
+            </ul>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.10">
+            <p id="section-toc.1-1.10.1"><a href="#appendix-A" class="auto internal xref"></a><a href="#name-acknowledgments" class="internal xref">Acknowledgments</a></p>
+</li>
+          <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.11">
+            <p id="section-toc.1-1.11.1"><a href="#appendix-B" class="auto internal xref"></a><a href="#name-authors-address" class="internal xref">Author's Address</a></p>
+</li>
+        </ul>
+</nav>
+</section>
+</div>
+<div id="introduction">
+<section id="section-1">
+      <h2 id="name-introduction">
+<a href="#section-1" class="section-number selfRef">1. </a><a href="#name-introduction" class="section-name selfRef">Introduction</a>
+      </h2>
+<p id="section-1-1">JSON Web Token (JWT) <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> and Security Assertion Markup Language
+(SAML) 2.0 <span>[<a href="#RFC7522" class="cite xref">RFC7522</a>]</span> bearer assertion profiles allow a client that
+already holds a security token, issued by a trusted party, to present that
+token directly to an OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> authorization server (AS) --
+either as an authorization grant or as a client authentication mechanism
+-- without minting a purpose-built, single-use assertion for every
+request. This specification is motivated primarily by workload identity
+systems: infrastructure that automatically issues and rotates short-lived
+X.509 certificates <span>[<a href="#RFC5280" class="cite xref">RFC5280</a>]</span> to software workloads -- services,
+processes, or automated agents, as distinct from human end users -- as
+their means of cryptographic identity, typically as part of a service
+mesh or zero-trust network architecture. SPIFFE and its SPIRE runtime
+<span>[<a href="#SPIFFE-X509-SVID" class="cite xref">SPIFFE-X509-SVID</a>]</span> and Athenz <span>[<a href="#ATHENZ-X509" class="cite xref">ATHENZ-X509</a>]</span> are two examples of such
+systems in current production use; both issue workloads an X.509
+certificate carrying a URI Subject Alternative Name (SAN), commonly using
+the "spiffe://" URI scheme, as the workload's primary identifier (see
+<a href="#terminology" class="auto internal xref">Section 1.2</a>). A workload that already holds such a certificate, and
+that already uses it to authenticate over mutual TLS to its peers,
+benefits from being able to use that same certificate and trust
+relationship directly with an OAuth 2.0 authorization server, instead of
+provisioning and operating a separate JWT issuer solely to obtain OAuth
+tokens. This specification is not limited to workload identity
+deployments, but they are its primary motivating use case, and are
+referenced throughout as running examples.<a href="#section-1-1" class="pilcrow">¶</a></p>
+<p id="section-1-2">This specification profiles the OAuth Assertion Framework <span>[<a href="#RFC7521" class="cite xref">RFC7521</a>]</span> to
+define an extension grant type that uses an X.509 certificate to request
+an OAuth 2.0 access token, as well as for use as a client authentication
+credential. The format and processing rules defined here are
+intentionally similar, though not identical, to those in <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> and
+<span>[<a href="#RFC7522" class="cite xref">RFC7522</a>]</span>; the differences arise from the structure and semantics of
+X.509 certificates, which were designed to bind a public key to a subject
+identity for use across many contexts and over comparatively long
+lifetimes, and not to express single-transaction claims such as an
+intended audience or an issuance time for one specific request.<a href="#section-1-2" class="pilcrow">¶</a></p>
+<p id="section-1-3">This specification is related to, but distinct from, "OAuth 2.0 Mutual-TLS
+Client Authentication and Certificate-Bound Access Tokens" <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>.
+RFC 8705 authenticates a client using the certificate presented during
+the TLS handshake with the authorization server itself, and does not
+define a way to use a certificate as an authorization grant. This
+specification instead carries a reference to (or, when necessary, a copy
+of) an X.509 certificate as an assertion value within the token request,
+which allows the same underlying PKI-issued identity to also be used as
+an authorization grant, and accommodates deployments in which TLS is
+terminated in front of the authorization server's application logic (for
+example, by a load balancer or reverse proxy) and the verified client
+certificate is forwarded to the token endpoint by a trusted intermediary.
+Because a certificate, unlike a private key, is not itself a secret,
+Section 3 of this document requires that proof of possession of the
+associated private key be corroborated by one of these mechanisms as part
+of processing every request; see also Section 6 (Security
+Considerations). Once a grant has been obtained or a client
+authenticated under this profile, <a href="#cnf" class="auto internal xref">Section 3.3</a> recommends carrying that same
+proof-of-possession property forward into the issued access token by
+reusing RFC 8705's certificate-bound access token mechanism, so that PKI
+possession is required consistently across the whole exchange rather than
+only at the token endpoint.<a href="#section-1-3" class="pilcrow">¶</a></p>
+<p id="section-1-4">The process by which the client obtains its X.509 certificate, prior to
+using it with the authorization server, is out of scope of this document.<a href="#section-1-4" class="pilcrow">¶</a></p>
+<div id="notational-conventions">
+<section id="section-1.1">
+        <h3 id="name-notational-conventions">
+<a href="#section-1.1" class="section-number selfRef">1.1. </a><a href="#name-notational-conventions" class="section-name selfRef">Notational Conventions</a>
+        </h3>
+<p id="section-1.1-1">The key words "<span class="bcp14">MUST</span>", "<span class="bcp14">MUST NOT</span>", "<span class="bcp14">REQUIRED</span>", "<span class="bcp14">SHALL</span>", "<span class="bcp14">SHALL NOT</span>", "<span class="bcp14">SHOULD</span>", "<span class="bcp14">SHOULD NOT</span>", "<span class="bcp14">RECOMMENDED</span>", "<span class="bcp14">NOT RECOMMENDED</span>",
+"<span class="bcp14">MAY</span>", and "<span class="bcp14">OPTIONAL</span>" in this document are to be interpreted as
+described in BCP 14 <span>[<a href="#RFC2119" class="cite xref">RFC2119</a>]</span> <span>[<a href="#RFC8174" class="cite xref">RFC8174</a>]</span> when, and only when, they
+appear in all capitals, as shown here.<a href="#section-1.1-1" class="pilcrow">¶</a></p>
+<p id="section-1.1-2">Unless otherwise noted, all the protocol parameter names and values are
+case sensitive.<a href="#section-1.1-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="terminology">
+<section id="section-1.2">
+        <h3 id="name-terminology">
+<a href="#section-1.2" class="section-number selfRef">1.2. </a><a href="#name-terminology" class="section-name selfRef">Terminology</a>
+        </h3>
+<p id="section-1.2-1">All terms are as defined in the following specifications: "The OAuth 2.0
+Authorization Framework" <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>, the OAuth Assertion Framework
+<span>[<a href="#RFC7521" class="cite xref">RFC7521</a>]</span>, and "Internet X.509 Public Key Infrastructure Certificate
+and Certificate Revocation List (CRL) Profile" <span>[<a href="#RFC5280" class="cite xref">RFC5280</a>]</span>.<a href="#section-1.2-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-1.2-2">
+          <dt id="section-1.2-2.1">X.509 Bearer Certificate:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.2-2.2">
+            <p id="section-1.2-2.2.1">An X.509 certificate, valid under <span>[<a href="#RFC5280" class="cite xref">RFC5280</a>]</span>, used as an assertion
+per this specification, together with a corroborated proof that the
+presenting party possesses the private key corresponding to the
+certificate's public key.<a href="#section-1.2-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.2-2.3">Issuing CA:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.2-2.4">
+            <p id="section-1.2-2.4.1">The Certification Authority identified in the Issuer field of an X.509
+Bearer Certificate.<a href="#section-1.2-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.2-2.5">Workload:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.2-2.6">
+            <p id="section-1.2-2.6.1">A software workload -- a service, process, or automated agent -- as
+distinct from a human end user, that acts as an OAuth client, a
+resource owner, or both, in its own right.<a href="#section-1.2-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.2-2.7">Workload Identity Certificate:</dt>
+          <dd style="margin-left: 1.5em" id="section-1.2-2.8">
+            <p id="section-1.2-2.8.1">An X.509 Bearer Certificate issued to a Workload by a workload identity
+control plane (for example, a SPIRE server implementing SPIFFE
+<span>[<a href="#SPIFFE-X509-SVID" class="cite xref">SPIFFE-X509-SVID</a>]</span>, or Athenz <span>[<a href="#ATHENZ-X509" class="cite xref">ATHENZ-X509</a>]</span>), as distinct from a
+certificate issued to a human end user by a general-purpose enterprise
+or public PKI. Workload Identity Certificates are typically valid for
+a short, fixed lifetime, are rotated automatically and frequently by
+the issuing control plane well before expiry, and identify the
+Workload using a URI SubjectAltName, commonly one using the
+"spiffe://" URI scheme, rather than (or in addition to) a Subject
+distinguished name.<a href="#section-1.2-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="http-parameter-bindings-for-transporting-x509-certificate-assertions">
+<section id="section-2">
+      <h2 id="name-http-parameter-bindings-for">
+<a href="#section-2" class="section-number selfRef">2. </a><a href="#name-http-parameter-bindings-for" class="section-name selfRef">HTTP Parameter Bindings for Transporting X.509 Certificate Assertions</a>
+      </h2>
+<p id="section-2-1">The OAuth Assertion Framework <span>[<a href="#RFC7521" class="cite xref">RFC7521</a>]</span> defines generic HTTP parameters
+for transporting assertions (a.k.a. security tokens) during interactions
+with a token endpoint. This section defines specific parameters and
+treatments of those parameters for use with X.509 Bearer Certificates.<a href="#section-2-1" class="pilcrow">¶</a></p>
+<div id="grants">
+<section id="section-2.1">
+        <h3 id="name-using-x509-certificates-as-">
+<a href="#section-2.1" class="section-number selfRef">2.1. </a><a href="#name-using-x509-certificates-as-" class="section-name selfRef">Using X.509 Certificates as Authorization Grants</a>
+        </h3>
+<p id="section-2.1-1">To use an X.509 Bearer Certificate as an authorization grant, the client
+uses an access token request as defined in Section 4 of the OAuth
+Assertion Framework <span>[<a href="#RFC7521" class="cite xref">RFC7521</a>]</span> with the following specific parameter
+values and encodings.<a href="#section-2.1-1" class="pilcrow">¶</a></p>
+<p id="section-2.1-2">The value of the "grant_type" is
+"urn:ietf:params:oauth:grant-type:x509-bearer".<a href="#section-2.1-2" class="pilcrow">¶</a></p>
+<p id="section-2.1-3">The value of the "assertion" parameter <span class="bcp14">MUST</span> contain a single X.509
+certificate, encoded as the base64url <span>[<a href="#RFC7521" class="cite xref">RFC7521</a>]</span>-style encoding
+(unpadded, per the base64url alphabet) of the certificate's DER
+<span>[<a href="#RFC5280" class="cite xref">RFC5280</a>]</span> encoding, or, when the client reaches the token endpoint over
+a mutually authenticated TLS connection, a thumbprint reference to that
+same certificate as defined in <a href="#thumbprint" class="auto internal xref">Section 2.3</a>.<a href="#section-2.1-3" class="pilcrow">¶</a></p>
+<p id="section-2.1-4">The "scope" parameter may be used, as defined in the OAuth Assertion
+Framework <span>[<a href="#RFC7521" class="cite xref">RFC7521</a>]</span>, to indicate the requested scope.<a href="#section-2.1-4" class="pilcrow">¶</a></p>
+<p id="section-2.1-5">Authentication of the client is optional, as described in Section 3.2.1
+of OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>, and consequently the "client_id" is only needed
+when a form of client authentication that relies on the parameter is
+used.<a href="#section-2.1-5" class="pilcrow">¶</a></p>
+<p id="section-2.1-6">The following example demonstrates an access token request with an X.509
+certificate as an authorization grant (with extra line breaks for display
+purposes only):<a href="#section-2.1-6" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-2.1-7">
+<pre>
+POST /token.oauth2 HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ax509-bearer
+&amp;assertion=MIIDXTCCAkWgAwIBAgIJAKrX1234abcd
+[...omitted for brevity...]
+</pre><a href="#section-2.1-7" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="client-auth">
+<section id="section-2.2">
+        <h3 id="name-using-x509-certificates-for">
+<a href="#section-2.2" class="section-number selfRef">2.2. </a><a href="#name-using-x509-certificates-for" class="section-name selfRef">Using X.509 Certificates for Client Authentication</a>
+        </h3>
+<p id="section-2.2-1">To use an X.509 Bearer Certificate for client authentication, the client
+uses the following parameter values and encodings.<a href="#section-2.2-1" class="pilcrow">¶</a></p>
+<p id="section-2.2-2">The value of the "client_assertion_type" is
+"urn:ietf:params:oauth:client-assertion-type:x509-bearer".<a href="#section-2.2-2" class="pilcrow">¶</a></p>
+<p id="section-2.2-3">The value of the "client_assertion" parameter contains a single X.509
+certificate, encoded as described in <a href="#grants" class="auto internal xref">Section 2.1</a>, or a thumbprint
+reference as described in <a href="#thumbprint" class="auto internal xref">Section 2.3</a>. It <span class="bcp14">MUST NOT</span> contain more than
+one certificate or reference.<a href="#section-2.2-3" class="pilcrow">¶</a></p>
+<p id="section-2.2-4">The following example demonstrates client authentication using an X.509
+certificate during the presentation of an authorization code grant in an
+access token request (with extra line breaks for display purposes only):<a href="#section-2.2-4" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-2.2-5">
+<pre>
+POST /token.oauth2 HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&amp;
+code=n0esc3NRze7LTCu7iYzS6a5acc3f0ogp4&amp;
+client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3A
+client-assertion-type%3Ax509-bearer&amp;
+client_assertion=MIIDXTCCAkWgAwIBAgIJAKrX1234abcd
+[...omitted for brevity...]
+</pre><a href="#section-2.2-5" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="thumbprint">
+<section id="section-2.3">
+        <h3 id="name-referencing-the-certificate">
+<a href="#section-2.3" class="section-number selfRef">2.3. </a><a href="#name-referencing-the-certificate" class="section-name selfRef">Referencing the Certificate Presented for Mutual TLS</a>
+        </h3>
+<p id="section-2.3-1">When the client reaches the token endpoint over a mutually authenticated
+TLS <span>[<a href="#RFC8446" class="cite xref">RFC8446</a>]</span> connection, the certificate it presented during that TLS
+handshake is already available to the authorization server, and
+embedding a full copy of it a second time in the "assertion" or
+"client_assertion" value is unnecessary. In this case, the client <span class="bcp14">MAY</span>
+instead send a reference to that certificate, consisting of the literal
+string "x5t#S256:" followed immediately by the base64url-encoded
+(unpadded) SHA-256 digest of the certificate's DER <span>[<a href="#RFC5280" class="cite xref">RFC5280</a>]</span> encoding
+-- computed identically to the "x5t#S256" confirmation method value
+defined in Section 3.1 of <span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>. Because neither "#" nor ":" occur
+in the base64url alphabet, this reference form can never be mistaken for
+the base64url-encoded certificate encoding described in <a href="#grants" class="auto internal xref">Section 2.1</a> and
+<a href="#client-auth" class="auto internal xref">Section 2.2</a>.<a href="#section-2.3-1" class="pilcrow">¶</a></p>
+<p id="section-2.3-2">An authorization server that receives an "assertion" or
+"client_assertion" value in this form <span class="bcp14">MUST</span> independently obtain the
+actual certificate from a source it trusts for the corroboration
+required by item 7 of <a href="#format" class="auto internal xref">Section 3</a> -- either the certificate presented on
+its own TLS connection with the client, or a certificate or thumbprint
+forwarded by a trusted intermediary -- and <span class="bcp14">MUST</span> verify that the SHA-256
+digest of that certificate's DER encoding matches the referenced
+thumbprint before proceeding. An authorization server <span class="bcp14">MUST NOT</span> accept a
+thumbprint reference together with a certificate supplied elsewhere in
+the client's request as if the two were mutually corroborating; the
+certificate the thumbprint is checked against <span class="bcp14">MUST</span> come from the TLS
+layer or a trusted intermediary, never from the request itself.<a href="#section-2.3-2" class="pilcrow">¶</a></p>
+<p id="section-2.3-3">This reference form is only meaningful when proof of possession is
+otherwise corroborated per item 7 of <a href="#format" class="auto internal xref">Section 3</a>; it is a shorthand for
+avoiding retransmission of a certificate the authorization server already
+has, not a substitute for that corroboration.<a href="#section-2.3-3" class="pilcrow">¶</a></p>
+<p id="section-2.3-4">The following example shows the client authentication example above
+expressed as a thumbprint reference instead of a full certificate, using
+the certificate from the example in <a href="#grants" class="auto internal xref">Section 2.1</a>, with extra line breaks
+for display purposes only:<a href="#section-2.3-4" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-2.3-5">
+<pre>
+POST /token.oauth2 HTTP/1.1
+Host: as.example.com
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code&amp;
+code=n0esc3NRze7LTCu7iYzS6a5acc3f0ogp4&amp;
+client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3A
+client-assertion-type%3Ax509-bearer&amp;
+client_assertion=x5t%23S256%3AkOpPSFiF3aL3tqsXOu72sHNitAB75QQLs6R81Q_yX6g
+</pre><a href="#section-2.3-5" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+</section>
+</div>
+<div id="format">
+<section id="section-3">
+      <h2 id="name-x509-certificate-format-and">
+<a href="#section-3" class="section-number selfRef">3. </a><a href="#name-x509-certificate-format-and" class="section-name selfRef">X.509 Certificate Format and Processing Requirements</a>
+      </h2>
+<p id="section-3-1">In order to issue an access token response as described in OAuth 2.0
+<span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span> or to rely on an X.509 certificate for client authentication,
+the authorization server <span class="bcp14">MUST</span> validate the certificate and the request
+according to the criteria below. Throughout this section, "the
+certificate" refers to the X.509 certificate conveyed by the "assertion"
+or "client_assertion" value, whether encoded directly as described in
+<a href="#grants" class="auto internal xref">Section 2.1</a> and <a href="#client-auth" class="auto internal xref">Section 2.2</a> or identified by a thumbprint reference as
+described in <a href="#thumbprint" class="auto internal xref">Section 2.3</a>. Application of additional restrictions and
+policy are at the discretion of the authorization server.<a href="#section-3-1" class="pilcrow">¶</a></p>
+<ol start="1" type="1" class="normal type-1" id="section-3-2">
+<li id="section-3-2.1">
+          <p id="section-3-2.1.1">The certificate <span class="bcp14">MUST</span> be well-formed and valid under <span>[<a href="#RFC5280" class="cite xref">RFC5280</a>]</span>,
+<span class="bcp14">MUST</span> chain to a trust anchor configured at the authorization server
+(either directly or via a configured set of intermediate CA
+certificates), and <span class="bcp14">MUST NOT</span> be revoked, as determined per the
+authorization server's configured revocation-checking mechanism (for
+example, CRLs or OCSP <span>[<a href="#RFC6960" class="cite xref">RFC6960</a>]</span>).<a href="#section-3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.2">
+          <p id="section-3-2.2.1">The Issuer field of the certificate identifies the Issuing CA, which
+fills a role equivalent to the "iss" claim in <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>. The
+authorization server <span class="bcp14">MUST</span> have a pre-established trust relationship
+with the Issuing CA, and <span class="bcp14">MUST NOT</span> accept certificates from CAs outside
+its configured set of trust anchors.<a href="#section-3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.3">
+          <p id="section-3-2.3.1">The Subject field and/or the subjectAltName extension of the
+certificate identifies the principal that is the subject of the
+certificate, filling a role equivalent to the "sub" claim in
+<span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>. Two cases need to be differentiated:<a href="#section-3-2.3.1" class="pilcrow">¶</a></p>
+<p id="section-3-2.3.2">
+A. For the authorization grant, the subject typically identifies an
+   authorized accessor for which the access token is being requested
+   (i.e., the resource owner or an authorized delegate).<a href="#section-3-2.3.2" class="pilcrow">¶</a></p>
+<p id="section-3-2.3.3">
+B. For client authentication, the subject, or a specific
+   subjectAltName value designated for this purpose by prior
+   agreement between the client and the authorization server, <span class="bcp14">MUST</span>
+   correspond to the "client_id" of the OAuth client.<a href="#section-3-2.3.3" class="pilcrow">¶</a></p>
+<p id="section-3-2.3.4">
+The authorization server <span class="bcp14">MUST</span> be configured, per Issuing CA, with the
+rule used to extract the relevant identifier from the Subject field or
+subjectAltName extension. For a Workload Identity Certificate
+(<a href="#terminology" class="auto internal xref">Section 1.2</a>), this identifier is typically a URI SAN, commonly
+one using the "spiffe://" URI scheme as issued by SPIFFE/SPIRE
+<span>[<a href="#SPIFFE-X509-SVID" class="cite xref">SPIFFE-X509-SVID</a>]</span> or Athenz <span>[<a href="#ATHENZ-X509" class="cite xref">ATHENZ-X509</a>]</span>; authorization servers
+supporting Workload Identity Certificates <span class="bcp14">SHOULD</span> extract the subject
+identifier from the URI SAN in preference to the Subject field, which
+such certificates often leave empty or unpopulated.<a href="#section-3-2.3.4" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.4">
+          <p id="section-3-2.4.1">X.509 certificates as defined in <span>[<a href="#RFC5280" class="cite xref">RFC5280</a>]</span> have no field with
+semantics equivalent to the JWT "aud" claim. Audience restriction for
+this profile is therefore established out of band between the
+Issuing CA (or its operator) and the authorization server, as part of
+the same agreement that establishes the trust anchor relationship
+described in item 2 above; see also <a href="#interop" class="auto internal xref">Section 5</a>. Where the subject
+identifier is a "spiffe://" URI SAN as described in item 3, the trust
+domain component of that URI (the authority component immediately
+following the scheme) <span class="bcp14">MAY</span> additionally be used by the authorization
+server as an informal, coarse-grained signal for which relying
+parties a given Issuing CA's certificates are intended for, but doing
+so is a matter of local policy and does not by itself substitute for
+the out-of-band trust agreement described above. A future revision of
+this specification, or a companion specification, <span class="bcp14">MAY</span> define an X.509
+certificate extension carrying an explicit, in-band audience
+restriction for deployments that require it; in the absence of such an
+extension, the authorization server <span class="bcp14">MUST</span> rely on its out-of-band
+configuration to determine whether it is an intended relying party for
+certificates issued by a given Issuing CA.<a href="#section-3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.5">
+          <p id="section-3-2.5.1">The certificate's notBefore and notAfter validity fields fill roles
+equivalent to the "nbf" and "exp" claims in <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span>. The
+authorization server <span class="bcp14">MUST</span> reject any certificate that is not currently
+within its validity period, subject to allowable clock skew between
+systems. The authorization server <span class="bcp14">MAY</span> reject certificates whose
+remaining validity period is unreasonably long for use as a bearer
+assertion under this profile; see <a href="#interop" class="auto internal xref">Section 5</a>.<a href="#section-3-2.5.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.6">
+          <p id="section-3-2.6.1">The combination of the Issuer field and the certificate's serialNumber
+fills a role equivalent to the "jti" claim in <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> as a unique
+identifier for the token. The authorization server <span class="bcp14">MAY</span> track
+(Issuer, serialNumber) pairs it has already processed, within a
+configured window, to detect and reject replayed requests; see
+<a href="#security" class="auto internal xref">Section 6</a>.<a href="#section-3-2.6.1" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.7">
+          <p id="section-3-2.7.1">The authorization server <span class="bcp14">MUST</span> corroborate that the party presenting
+the certificate possesses the private key corresponding to the
+certificate's public key. This corroboration <span class="bcp14">MUST</span> be established by
+one of the following means:<a href="#section-3-2.7.1" class="pilcrow">¶</a></p>
+<p id="section-3-2.7.2">
+A. The certificate presented as the "assertion" or "client_assertion"
+   value is the same certificate the client presented during mutual
+   TLS authentication of the connection to the token endpoint, per
+   <span>[<a href="#RFC8446" class="cite xref">RFC8446</a>]</span>, thereby directly proving possession as part of the TLS
+   handshake; or<a href="#section-3-2.7.2" class="pilcrow">¶</a></p>
+<p id="section-3-2.7.3">
+B. The certificate was forwarded to the authorization server by a
+   trusted intermediary (for example, a TLS-terminating reverse proxy
+   or load balancer situated directly in front of the authorization
+   server) over a channel the authorization server trusts, together
+   with an attestation from that intermediary that the certificate was
+   successfully used to authenticate a TLS client during the
+   connection now being forwarded.<a href="#section-3-2.7.3" class="pilcrow">¶</a></p>
+<p id="section-3-2.7.4">
+A certificate presented as an "assertion" or "client_assertion" value
+without either form of corroboration <span class="bcp14">MUST</span> be rejected. See
+<a href="#security" class="auto internal xref">Section 6</a>. When the "assertion" or "client_assertion" value is a
+thumbprint reference per <a href="#thumbprint" class="auto internal xref">Section 2.3</a>, mechanism (A) is satisfied
+directly: the authorization server computes the comparison thumbprint
+from the certificate it obtained via its own TLS handshake with the
+client, rather than from a certificate encoded in the request itself.<a href="#section-3-2.7.4" class="pilcrow">¶</a></p>
+</li>
+        <li id="section-3-2.8">
+          <p id="section-3-2.8.1">The authorization server <span class="bcp14">MUST</span> reject a certificate that is not valid
+in all other respects per <span>[<a href="#RFC5280" class="cite xref">RFC5280</a>]</span>, including but not limited to
+key usage and extended key usage constraints applicable to this use,
+where such constraints are configured by the authorization server.<a href="#section-3-2.8.1" class="pilcrow">¶</a></p>
+</li>
+      </ol>
+<div id="authorization-grant-processing">
+<section id="section-3.1">
+        <h3 id="name-authorization-grant-process">
+<a href="#section-3.1" class="section-number selfRef">3.1. </a><a href="#name-authorization-grant-process" class="section-name selfRef">Authorization Grant Processing</a>
+        </h3>
+<p id="section-3.1-1">X.509 Bearer Certificate authorization grants may be used with or without
+client authentication or identification. Whether or not client
+authentication is needed in conjunction with an X.509 Bearer Certificate
+authorization grant, as well as the supported types of client
+authentication, are policy decisions at the discretion of the
+authorization server. However, if client credentials are present in the
+request, the authorization server <span class="bcp14">MUST</span> validate them.<a href="#section-3.1-1" class="pilcrow">¶</a></p>
+<p id="section-3.1-2">If the certificate is not valid, or the current time is not within the
+certificate's valid time window for use, or proof of possession cannot be
+corroborated as required by item 7 of <a href="#format" class="auto internal xref">Section 3</a>, the authorization
+server constructs an error response as defined in OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>.
+The value of the "error" parameter <span class="bcp14">MUST</span> be the "invalid_grant" error
+code. The authorization server <span class="bcp14">MAY</span> include additional information
+regarding the reasons the certificate was considered invalid using the
+"error_description" or "error_uri" parameters.<a href="#section-3.1-2" class="pilcrow">¶</a></p>
+<p id="section-3.1-3">For example:<a href="#section-3.1-3" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-3.1-4">
+<pre>
+HTTP/1.1 400 Bad Request
+Content-Type: application/json
+Cache-Control: no-store
+
+{
+ "error":"invalid_grant",
+ "error_description":"Certificate chain did not validate to a
+  trusted root"
+}
+</pre><a href="#section-3.1-4" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="client-authentication-processing">
+<section id="section-3.2">
+        <h3 id="name-client-authentication-proce">
+<a href="#section-3.2" class="section-number selfRef">3.2. </a><a href="#name-client-authentication-proce" class="section-name selfRef">Client Authentication Processing</a>
+        </h3>
+<p id="section-3.2-1">If the client's certificate is not valid, the authorization server
+constructs an error response as defined in OAuth 2.0 <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>. The
+value of the "error" parameter <span class="bcp14">MUST</span> be the "invalid_client" error code.
+The authorization server <span class="bcp14">MAY</span> include additional information regarding
+the reasons the certificate was considered invalid using the
+"error_description" or "error_uri" parameters.<a href="#section-3.2-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="cnf">
+<section id="section-3.3">
+        <h3 id="name-certificate-bound-access-to">
+<a href="#section-3.3" class="section-number selfRef">3.3. </a><a href="#name-certificate-bound-access-to" class="section-name selfRef">Certificate-Bound Access Tokens</a>
+        </h3>
+<p id="section-3.3-1">When an authorization server issues an access token as a result of
+successfully processing an X.509 Bearer Certificate authorization grant
+(<a href="#grants" class="auto internal xref">Section 2.1</a>), or after authenticating a client using an X.509 Bearer
+Certificate under this profile (<a href="#client-auth" class="auto internal xref">Section 2.2</a>), the authorization
+server <span class="bcp14">SHOULD</span> bind the resulting access token to that certificate using
+the certificate-bound access token mechanism defined in Section 3 of
+<span>[<a href="#RFC8705" class="cite xref">RFC8705</a>]</span>, rather than issuing a plain bearer access token. Doing so
+carries the proof-of-possession property established when the
+certificate was corroborated per item 7 of <a href="#format" class="auto internal xref">Section 3</a> forward to the
+resource server, using the same "x5t#S256" confirmation method value
+already reused for the reference form defined in <a href="#thumbprint" class="auto internal xref">Section 2.3</a>, so that
+use of the access token also requires possession of the same private key
+that was required to obtain it.<a href="#section-3.3-1" class="pilcrow">¶</a></p>
+<p id="section-3.3-2">An authorization server <span class="bcp14">MAY</span> instead issue a plain bearer access token
+<span>[<a href="#RFC6750" class="cite xref">RFC6750</a>]</span> when local policy determines that certificate binding is
+unnecessary for the resource being protected, but doing so discards the
+proof-of-possession property this profile otherwise provides throughout
+the request, and <span class="bcp14">SHOULD</span> be a deliberate policy choice rather than a
+default.<a href="#section-3.3-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="authorization-grant-example">
+<section id="section-4">
+      <h2 id="name-authorization-grant-example">
+<a href="#section-4" class="section-number selfRef">4. </a><a href="#name-authorization-grant-example" class="section-name selfRef">Authorization Grant Example</a>
+      </h2>
+<p id="section-4-1">The following example illustrates what a conforming certificate and an
+access token request would look like.<a href="#section-4-1" class="pilcrow">¶</a></p>
+<p id="section-4-2">The example shows a Workload Identity Certificate (<a href="#terminology" class="auto internal xref">Section 1.2</a>)
+issued to a "billing" workload by the Issuing CA identified as
+"CN=Example Workload CA, O=Example Corp, C=US". The subject of the
+certificate is identified by a "spiffe://" URI SAN,
+"spiffe://example.org/ns/prod/sa/billing", per <span>[<a href="#SPIFFE-X509-SVID" class="cite xref">SPIFFE-X509-SVID</a>]</span>, and
+is valid for one hour, consistent with automatic rotation by the issuing
+workload identity control plane. The authorization server
+"https://authz.example.net" has been configured, out of band, to trust
+certificates issued by this CA, and to treat the trust domain
+"example.org" as identifying an intended relying party, as described in
+<a href="#interop" class="auto internal xref">Section 5</a>. The client presents the certificate over a mutually
+authenticated TLS connection to the authorization server's token endpoint
+at "https://authz.example.net/token.oauth2".<a href="#section-4-2" class="pilcrow">¶</a></p>
+<p id="section-4-3">Below is a summary of the relevant fields of the certificate:<a href="#section-4-3" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-4-4">
+<pre>
+Issuer: CN=Example Workload CA, O=Example Corp, C=US
+Subject: (empty)
+Subject Alternative Name: URI = spiffe://example.org/ns/prod/sa/billing
+Validity:
+    Not Before: 2026-08-19T12:00:00Z
+    Not After:  2026-08-19T13:00:00Z
+Serial Number: 4096
+</pre><a href="#section-4-4" class="pilcrow">¶</a>
+</div>
+<p id="section-4-5">To present this certificate as part of an access token request, the
+client -- having already established the connection above via mutual TLS
+using this same certificate -- might make the following HTTPS request
+(with extra line breaks for display purposes only):<a href="#section-4-5" class="pilcrow">¶</a></p>
+<div class="alignLeft art-text artwork" id="section-4-6">
+<pre>
+POST /token.oauth2 HTTP/1.1
+Host: authz.example.net
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ax509-bearer
+&amp;assertion=MIIDXTCCAkWgAwIBAgIQEBAAAAAAAAAAAAAAAAAAADANBgkqhkiG9w0B
+AQsFADBAMQswCQYDVQQGEwJVUzEUMBIGA1UEChMLRXhhbXBsZSBDb3Jw
+[...omitted for brevity...]
+</pre><a href="#section-4-6" class="pilcrow">¶</a>
+</div>
+</section>
+</div>
+<div id="interop">
+<section id="section-5">
+      <h2 id="name-interoperability-considerat">
+<a href="#section-5" class="section-number selfRef">5. </a><a href="#name-interoperability-considerat" class="section-name selfRef">Interoperability Considerations</a>
+      </h2>
+<p id="section-5-1">Agreement between system entities regarding trust anchors, identifiers,
+and endpoints is required in order to achieve interoperable deployments
+of this profile. Specific items that require agreement are as follows:
+the set of trust anchors and Issuing CAs recognized by the authorization
+server, the rule used to map a certificate's Subject field or
+subjectAltName extension to a resource owner identity or "client_id",
+which Issuing CAs' certificates the authorization server considers itself
+an intended relying party for (in lieu of an in-band "aud" equivalent, per
+item 4 of <a href="#format" class="auto internal xref">Section 3</a>), the revocation-checking mechanism to be used, the
+mechanism by which proof of possession is corroborated (direct mutual TLS
+to the authorization server versus a trusted forwarding intermediary, per
+item 7 of <a href="#format" class="auto internal xref">Section 3</a>), whether the authorization server accepts the
+thumbprint reference form of <a href="#thumbprint" class="auto internal xref">Section 2.3</a> in addition to, or instead
+of, a fully encoded certificate, and any maximum certificate lifetime the
+authorization server will accept for use under this profile. The exchange
+of such information is explicitly out of scope for this specification.
+Where the Issuing CA is a workload identity control plane, some or all of
+this agreement may be established and kept current automatically, for
+example by having the authorization server obtain and refresh its set of
+trust anchors from a SPIFFE trust bundle endpoint <span>[<a href="#SPIFFE-X509-SVID" class="cite xref">SPIFFE-X509-SVID</a>]</span> or
+an equivalent mechanism, rather than through static, manually configured
+trust anchors; this specification does not define such a mechanism and
+treats it as an implementation detail of how the out-of-band agreement
+above is kept up to date.<a href="#section-5-1" class="pilcrow">¶</a></p>
+<p id="section-5-2">Because certificates issued for general-purpose PKI use are typically
+valid for periods far longer than is typical for a JWT or SAML bearer
+assertion, deployments <span class="bcp14">SHOULD</span> either issue certificates intended for use
+under this profile with comparatively short validity periods, or have the
+authorization server apply a locally configured maximum acceptable
+remaining lifetime, or both. Workload Identity Certificates
+(<a href="#terminology" class="auto internal xref">Section 1.2</a>) issued by systems such as SPIFFE/SPIRE
+<span>[<a href="#SPIFFE-X509-SVID" class="cite xref">SPIFFE-X509-SVID</a>]</span> or Athenz <span>[<a href="#ATHENZ-X509" class="cite xref">ATHENZ-X509</a>]</span> already follow this
+practice by design, typically being valid for periods on the order of
+minutes to hours and rotated automatically well before expiry; deployments
+using such certificates under this profile satisfy this recommendation
+without additional configuration, and this is the expected deployment
+pattern this specification is primarily designed around; see also
+<a href="#security" class="auto internal xref">Section 6</a>.<a href="#section-5-2" class="pilcrow">¶</a></p>
+<p id="section-5-3">RSA with SHA-256, and ECDSA with curve P-256 and SHA-256, are <span class="bcp14">RECOMMENDED</span>
+baseline certificate signature algorithms for this profile, to maximize
+interoperability.<a href="#section-5-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="security">
+<section id="section-6">
+      <h2 id="name-security-considerations">
+<a href="#section-6" class="section-number selfRef">6. </a><a href="#name-security-considerations" class="section-name selfRef">Security Considerations</a>
+      </h2>
+<p id="section-6-1">The security considerations described within the following
+specifications are all applicable to this document: "Assertion Framework
+for OAuth 2.0 Client Authentication and Authorization Grants"
+<span>[<a href="#RFC7521" class="cite xref">RFC7521</a>]</span>, "The OAuth 2.0 Authorization Framework" <span>[<a href="#RFC6749" class="cite xref">RFC6749</a>]</span>, and
+"Internet X.509 Public Key Infrastructure Certificate and Certificate
+Revocation List (CRL) Profile" <span>[<a href="#RFC5280" class="cite xref">RFC5280</a>]</span>.<a href="#section-6-1" class="pilcrow">¶</a></p>
+<p id="section-6-2">Unlike a JWT or SAML assertion, whose bearer semantics rely on the
+issuer's signature over a short-lived, narrowly scoped set of claims, an
+X.509 certificate is designed to be shared openly: it is routinely sent
+in the clear during TLS handshakes, may be logged by intermediaries,
+and, for publicly trusted CAs, may be published in Certificate
+Transparency logs. A certificate is therefore not a secret, and a copy
+of one proves nothing about who is presenting it. For this reason, this
+specification requires, in item 7 of <a href="#format" class="auto internal xref">Section 3</a>, that possession of the
+certificate's private key be corroborated for every request, either
+through the TLS handshake to the authorization server itself or through
+an attestation from a trusted intermediary. Implementations <span class="bcp14">MUST NOT</span>
+grant access, and <span class="bcp14">MUST NOT</span> authenticate a client, solely on the basis
+that a syntactically and cryptographically valid certificate was
+presented as an "assertion" or "client_assertion" value; doing so would
+allow trivial impersonation by any party that obtained a copy of the
+certificate, without needing the associated private key.<a href="#section-6-2" class="pilcrow">¶</a></p>
+<p id="section-6-3">Authorization servers <span class="bcp14">SHOULD</span> track recently processed
+(Issuer, serialNumber) pairs, within a window derived from the
+certificate's validity period or a locally configured limit, to reduce
+the impact of a request being replayed even when proof of possession
+corroboration per item 7 of <a href="#format" class="auto internal xref">Section 3</a> is somehow satisfied more than
+once (for example, by a compromised or overly permissive forwarding
+intermediary).<a href="#section-6-3" class="pilcrow">¶</a></p>
+<p id="section-6-4">For general-purpose, longer-lived certificates, revocation checking is
+particularly important under this profile, since certificate validity
+periods can be much longer than the lifetime of a JWT or SAML bearer
+assertion; a compromised private key can otherwise remain usable under
+this profile for a much longer window than would be typical of the
+analogous JWT or SAML bearer profiles. For Workload Identity Certificates
+(<a href="#terminology" class="auto internal xref">Section 1.2</a>), whose short validity periods and frequent, automatic
+rotation are themselves the primary mitigation against a compromised
+private key remaining usable for long, revocation checking is a useful
+defense-in-depth measure but is less load-bearing than certificate
+lifetime, and authorization servers deployed against such certificates
+<span class="bcp14">MAY</span> choose not to perform revocation checking at all, provided the
+configured maximum acceptable certificate lifetime (see <a href="#interop" class="auto internal xref">Section 5</a>) is
+short enough that the risk is otherwise acceptable.<a href="#section-6-4" class="pilcrow">¶</a></p>
+<p id="section-6-5">Authorization servers configured to trust more than one Issuing CA <span class="bcp14">MUST</span>
+ensure that identifiers extracted from a certificate issued by one CA are
+not confused with, or allowed to impersonate, identifiers meant to be
+asserted only by a different CA.<a href="#section-6-5" class="pilcrow">¶</a></p>
+<p id="section-6-6">The thumbprint reference form defined in <a href="#thumbprint" class="auto internal xref">Section 2.3</a> is only as
+trustworthy as the source the authorization server checks it against. An
+authorization server <span class="bcp14">MUST</span> compute the comparison thumbprint from a
+certificate it obtained itself, either from its own TLS stack or from a
+trusted intermediary via a channel the client cannot influence; it
+<span class="bcp14">MUST NOT</span> accept a thumbprint together with a client-supplied certificate
+purporting to match it, since a client able to influence both values
+could reference an arbitrary certificate it does not hold the private
+key for.<a href="#section-6-6" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="privacy-considerations">
+<section id="section-7">
+      <h2 id="name-privacy-considerations">
+<a href="#section-7" class="section-number selfRef">7. </a><a href="#name-privacy-considerations" class="section-name selfRef">Privacy Considerations</a>
+      </h2>
+<p id="section-7-1">An X.509 certificate typically contains more identifying information
+than the minimal set of claims a deployment would choose for a JWT or
+SAML bearer assertion, and, being a long-lived, widely presented
+credential, can act as a stable identifier that enables correlation of a
+subject's activity across the multiple relying parties the certificate is
+presented to. To prevent disclosure of such information to unintended
+parties, an X.509 Bearer Certificate should only be transmitted over
+encrypted channels, such as those provided by TLS <span>[<a href="#RFC8446" class="cite xref">RFC8446</a>]</span>.<a href="#section-7-1" class="pilcrow">¶</a></p>
+<p id="section-7-2">Deployments should determine the minimum amount of information necessary
+in the Subject field and subjectAltName extension to complete the
+exchange, should consider issuing purpose-specific certificates rather
+than reusing a single general-purpose certificate across unrelated
+relying parties, and should consult the guidance in <span>[<a href="#RFC6973" class="cite xref">RFC6973</a>]</span> when
+designing the identifiers a certificate exposes.<a href="#section-7-2" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="iana-considerations">
+<section id="section-8">
+      <h2 id="name-iana-considerations">
+<a href="#section-8" class="section-number selfRef">8. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
+      </h2>
+<div id="sub-namespace-registration-of-urnietfparamsoauthgrant-typex509-bearer">
+<section id="section-8.1">
+        <h3 id="name-sub-namespace-registration-">
+<a href="#section-8.1" class="section-number selfRef">8.1. </a><a href="#name-sub-namespace-registration-" class="section-name selfRef">Sub-Namespace Registration of urn:ietf:params:oauth:grant-type:x509-bearer</a>
+        </h3>
+<p id="section-8.1-1">This section registers the value "grant-type:x509-bearer" in the IANA
+"OAuth URI" registry established by "An IETF URN Sub-Namespace for OAuth"
+<span>[<a href="#RFC6755" class="cite xref">RFC6755</a>]</span>.<a href="#section-8.1-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.1-2.1">
+            <p id="section-8.1-2.1.1">URN: urn:ietf:params:oauth:grant-type:x509-bearer<a href="#section-8.1-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.2">
+            <p id="section-8.1-2.2.1">Common Name: X.509 Bearer Certificate Grant Type Profile for OAuth 2.0<a href="#section-8.1-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.3">
+            <p id="section-8.1-2.3.1">Change Controller: IESG<a href="#section-8.1-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.1-2.4">
+            <p id="section-8.1-2.4.1">Specification Document: This document<a href="#section-8.1-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+</section>
+</div>
+<div id="sub-namespace-registration-of-urnietfparamsoauthclient-assertion-typex509-bearer">
+<section id="section-8.2">
+        <h3 id="name-sub-namespace-registration-o">
+<a href="#section-8.2" class="section-number selfRef">8.2. </a><a href="#name-sub-namespace-registration-o" class="section-name selfRef">Sub-Namespace Registration of urn:ietf:params:oauth:client-assertion-type:x509-bearer</a>
+        </h3>
+<p id="section-8.2-1">This section registers the value "client-assertion-type:x509-bearer" in
+the IANA "OAuth URI" registry established by "An IETF URN Sub-Namespace
+for OAuth" <span>[<a href="#RFC6755" class="cite xref">RFC6755</a>]</span>.<a href="#section-8.2-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-8.2-2.1">
+            <p id="section-8.2-2.1.1">URN: urn:ietf:params:oauth:client-assertion-type:x509-bearer<a href="#section-8.2-2.1.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.2">
+            <p id="section-8.2-2.2.1">Common Name: X.509 Bearer Certificate Profile for OAuth 2.0 Client
+Authentication<a href="#section-8.2-2.2.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.3">
+            <p id="section-8.2-2.3.1">Change Controller: IESG<a href="#section-8.2-2.3.1" class="pilcrow">¶</a></p>
+</li>
+          <li class="normal" id="section-8.2-2.4">
+            <p id="section-8.2-2.4.1">Specification Document: This document<a href="#section-8.2-2.4.1" class="pilcrow">¶</a></p>
+</li>
+        </ul>
+<p id="section-8.2-3">This document does not request assignment of an X.509 certificate
+extension object identifier. Should a future revision define the
+optional in-band audience-restriction extension mentioned in item 4 of
+<a href="#format" class="auto internal xref">Section 3</a>, that revision will need to make an appropriate IANA request
+at that time.<a href="#section-8.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+</section>
+</div>
+<div id="sec-combined-references">
+<section id="section-9">
+      <h2 id="name-references">
+<a href="#section-9" class="section-number selfRef">9. </a><a href="#name-references" class="section-name selfRef">References</a>
+      </h2>
+<div id="sec-normative-references">
+<section id="section-9.1">
+        <h3 id="name-normative-references">
+<a href="#section-9.1" class="section-number selfRef">9.1. </a><a href="#name-normative-references" class="section-name selfRef">Normative References</a>
+        </h3>
+<dl class="references">
+<dt id="RFC2119">[RFC2119]</dt>
+        <dd>
+<span class="refAuthor">Bradner, S.</span>, <span class="refTitle">"Key words for use in RFCs to Indicate Requirement Levels"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 2119</span>, <span class="seriesInfo">DOI 10.17487/RFC2119</span>, <time datetime="1997-03" class="refDate">March 1997</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc2119">https://www.rfc-editor.org/rfc/rfc2119</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC5280">[RFC5280]</dt>
+        <dd>
+<span class="refAuthor">Cooper, D.</span>, <span class="refAuthor">Santesson, S.</span>, <span class="refAuthor">Farrell, S.</span>, <span class="refAuthor">Boeyen, S.</span>, <span class="refAuthor">Housley, R.</span>, and <span class="refAuthor">W. Polk</span>, <span class="refTitle">"Internet X.509 Public Key Infrastructure Certificate and Certificate Revocation List (CRL) Profile"</span>, <span class="seriesInfo">RFC 5280</span>, <span class="seriesInfo">DOI 10.17487/RFC5280</span>, <time datetime="2008-05" class="refDate">May 2008</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc5280">https://www.rfc-editor.org/rfc/rfc5280</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6749">[RFC6749]</dt>
+        <dd>
+<span class="refAuthor">Hardt, D., Ed.</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework"</span>, <span class="seriesInfo">RFC 6749</span>, <span class="seriesInfo">DOI 10.17487/RFC6749</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6749">https://www.rfc-editor.org/rfc/rfc6749</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6755">[RFC6755]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span> and <span class="refAuthor">H. Tschofenig</span>, <span class="refTitle">"An IETF URN Sub-Namespace for OAuth"</span>, <span class="seriesInfo">RFC 6755</span>, <span class="seriesInfo">DOI 10.17487/RFC6755</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6755">https://www.rfc-editor.org/rfc/rfc6755</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7521">[RFC7521]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Mortimore, C.</span>, <span class="refAuthor">Jones, M.</span>, and <span class="refAuthor">Y. Goland</span>, <span class="refTitle">"Assertion Framework for OAuth 2.0 Client Authentication and Authorization Grants"</span>, <span class="seriesInfo">RFC 7521</span>, <span class="seriesInfo">DOI 10.17487/RFC7521</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7521">https://www.rfc-editor.org/rfc/rfc7521</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8174">[RFC8174]</dt>
+      <dd>
+<span class="refAuthor">Leiba, B.</span>, <span class="refTitle">"Ambiguity of Uppercase vs Lowercase in RFC 2119 Key Words"</span>, <span class="seriesInfo">BCP 14</span>, <span class="seriesInfo">RFC 8174</span>, <span class="seriesInfo">DOI 10.17487/RFC8174</span>, <time datetime="2017-05" class="refDate">May 2017</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8174">https://www.rfc-editor.org/rfc/rfc8174</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+<div id="sec-informative-references">
+<section id="section-9.2">
+        <h3 id="name-informative-references">
+<a href="#section-9.2" class="section-number selfRef">9.2. </a><a href="#name-informative-references" class="section-name selfRef">Informative References</a>
+        </h3>
+<dl class="references">
+<dt id="ATHENZ-X509">[ATHENZ-X509]</dt>
+        <dd>
+<span class="refAuthor">Athenz Project</span>, <span class="refTitle">"Athenz: Using X.509 Certificates"</span>, <span>&lt;<a href="https://athenz.github.io/athenz/service_x509_credentials/">https://athenz.github.io/athenz/service_x509_credentials/</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6750">[RFC6750]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span> and <span class="refAuthor">D. Hardt</span>, <span class="refTitle">"The OAuth 2.0 Authorization Framework: Bearer Token Usage"</span>, <span class="seriesInfo">RFC 6750</span>, <span class="seriesInfo">DOI 10.17487/RFC6750</span>, <time datetime="2012-10" class="refDate">October 2012</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6750">https://www.rfc-editor.org/rfc/rfc6750</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6960">[RFC6960]</dt>
+        <dd>
+<span class="refAuthor">Santesson, S.</span>, <span class="refAuthor">Myers, M.</span>, <span class="refAuthor">Ankney, R.</span>, <span class="refAuthor">Malpani, A.</span>, <span class="refAuthor">Galperin, S.</span>, and <span class="refAuthor">C. Adams</span>, <span class="refTitle">"X.509 Internet Public Key Infrastructure Online Certificate Status Protocol - OCSP"</span>, <span class="seriesInfo">RFC 6960</span>, <span class="seriesInfo">DOI 10.17487/RFC6960</span>, <time datetime="2013-06" class="refDate">June 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6960">https://www.rfc-editor.org/rfc/rfc6960</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC6973">[RFC6973]</dt>
+        <dd>
+<span class="refAuthor">Cooper, A.</span>, <span class="refAuthor">Tschofenig, H.</span>, <span class="refAuthor">Aboba, B.</span>, <span class="refAuthor">Peterson, J.</span>, <span class="refAuthor">Morris, J.</span>, <span class="refAuthor">Hansen, M.</span>, and <span class="refAuthor">R. Smith</span>, <span class="refTitle">"Privacy Considerations for Internet Protocols"</span>, <span class="seriesInfo">RFC 6973</span>, <span class="seriesInfo">DOI 10.17487/RFC6973</span>, <time datetime="2013-07" class="refDate">July 2013</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc6973">https://www.rfc-editor.org/rfc/rfc6973</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7522">[RFC7522]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Mortimore, C.</span>, and <span class="refAuthor">M. Jones</span>, <span class="refTitle">"Security Assertion Markup Language (SAML) 2.0 Profile for OAuth 2.0 Client Authentication and Authorization Grants"</span>, <span class="seriesInfo">RFC 7522</span>, <span class="seriesInfo">DOI 10.17487/RFC7522</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7522">https://www.rfc-editor.org/rfc/rfc7522</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC7523">[RFC7523]</dt>
+        <dd>
+<span class="refAuthor">Jones, M.</span>, <span class="refAuthor">Campbell, B.</span>, and <span class="refAuthor">C. Mortimore</span>, <span class="refTitle">"JSON Web Token (JWT) Profile for OAuth 2.0 Client Authentication and Authorization Grants"</span>, <span class="seriesInfo">RFC 7523</span>, <span class="seriesInfo">DOI 10.17487/RFC7523</span>, <time datetime="2015-05" class="refDate">May 2015</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc7523">https://www.rfc-editor.org/rfc/rfc7523</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8446">[RFC8446]</dt>
+        <dd>
+<span class="refAuthor">Rescorla, E.</span>, <span class="refTitle">"The Transport Layer Security (TLS) Protocol Version 1.3"</span>, <span class="seriesInfo">RFC 8446</span>, <span class="seriesInfo">DOI 10.17487/RFC8446</span>, <time datetime="2018-08" class="refDate">August 2018</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8446">https://www.rfc-editor.org/rfc/rfc8446</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="RFC8705">[RFC8705]</dt>
+        <dd>
+<span class="refAuthor">Campbell, B.</span>, <span class="refAuthor">Bradley, J.</span>, <span class="refAuthor">Sakimura, N.</span>, and <span class="refAuthor">T. Lodderstedt</span>, <span class="refTitle">"OAuth 2.0 Mutual-TLS Client Authentication and Certificate-Bound Access Tokens"</span>, <span class="seriesInfo">RFC 8705</span>, <span class="seriesInfo">DOI 10.17487/RFC8705</span>, <time datetime="2020-02" class="refDate">February 2020</time>, <span>&lt;<a href="https://www.rfc-editor.org/rfc/rfc8705">https://www.rfc-editor.org/rfc/rfc8705</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+<dt id="SPIFFE-X509-SVID">[SPIFFE-X509-SVID]</dt>
+      <dd>
+<span class="refAuthor">SPIFFE Project</span>, <span class="refTitle">"SPIFFE X.509 SVID"</span>, <span>&lt;<a href="https://github.com/spiffe/spiffe/blob/main/standards/X509-SVID.md">https://github.com/spiffe/spiffe/blob/main/standards/X509-SVID.md</a>&gt;</span>. </dd>
+<dd class="break"></dd>
+</dl>
+</section>
+</div>
+</section>
+</div>
+<div id="acknowledgments">
+<section id="appendix-A">
+      <h2 id="name-acknowledgments">
+<a href="#name-acknowledgments" class="section-name selfRef">Acknowledgments</a>
+      </h2>
+<p id="appendix-A-1">This profile follows the pattern established by <span>[<a href="#RFC7523" class="cite xref">RFC7523</a>]</span> and
+<span>[<a href="#RFC7522" class="cite xref">RFC7522</a>]</span>, which share a common lineage back to the OAuth Assertion
+Framework <span>[<a href="#RFC7521" class="cite xref">RFC7521</a>]</span>. TODO acknowledge reviewers and contributors.<a href="#appendix-A-1" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="authors-addresses">
+<section id="appendix-B">
+      <h2 id="name-authors-address">
+<a href="#name-authors-address" class="section-name selfRef">Author's Address</a>
+      </h2>
+<address class="vcard">
+        <div dir="auto" class="left"><span class="fn nameRole">John Kemp</span></div>
+<div dir="auto" class="left"><span class="org">Your Organization Here</span></div>
+<div class="email">
+<span>Email:</span>
+<a href="mailto:unstable.pseudonym@stabledomain.net" class="email">unstable.pseudonym@stabledomain.net</a>
+</div>
+</address>
+</section>
+</div>
+<script>const toc = document.getElementById("toc");
+toc.querySelector("h2").addEventListener("click", e => {
+  toc.classList.toggle("active");
+});
+toc.querySelector("nav").addEventListener("click", e => {
+  toc.classList.remove("active");
+});
+</script>
+</body>
+</html>
