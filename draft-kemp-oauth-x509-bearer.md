@@ -3,7 +3,7 @@ title: "X.509 Certificate Bearer Profile for OAuth 2.0 Client Authentication and
 abbrev: "OAuth X.509 Bearer"
 category: std
 
-docname: draft-kemp-oauth-x509-bearer-latest
+docname: draft-kemp-oauth-x509-bearer-00
 submissiontype: IETF  # also: "independent", "editorial", "IAB", or "IRTF"
 number:
 date:
@@ -36,14 +36,14 @@ normative:
   RFC5280:
   RFC6749:
   RFC7521:
-  RFC6755:
 
 informative:
+  RFC6755:
   RFC7522:
   RFC7523:
   RFC8705:
   RFC6960:
-  RFC8446:
+  RFC9846:
   RFC6973:
   SPIFFE-X509-SVID:
     title: "SPIFFE X.509 SVID"
@@ -64,20 +64,20 @@ informative:
 
 --- abstract
 
-This specification defines the use of an X.509 certificate, issued under a
-Public Key Infrastructure (PKI), as a means for requesting an OAuth 2.0
-access token as well as for client authentication, profiling the Assertion
-Framework for OAuth 2.0 Client Authentication and Authorization Grants
-({{RFC7521}}) in a manner analogous to the JSON Web Token (JWT) Bearer
-Token profile ({{RFC7523}}) and the SAML 2.0 Bearer Assertion profile
-({{RFC7522}}). It is motivated primarily by workload identity systems,
-such as SPIFFE/SPIRE and Athenz, that already issue software workloads
-short-lived X.509 certificates for mutual TLS, and that benefit from
-using those same certificates directly with OAuth 2.0. Unlike a bare
-bearer credential, this profile requires that possession of the private
-key corresponding to the certificate's public key be corroborated as part
-of every use, so that a copy of the certificate alone -- which is not a
-secret -- is never sufficient to obtain a grant or authenticate a client.
+This specification defines the use of an X.509 certificate, issued
+under a Public Key Infrastructure (PKI), as a means for requesting an
+OAuth 2.0 access token as well as for client authentication, profiling
+the Assertion Framework for OAuth 2.0 Client Authentication and
+Authorization Grants in a manner analogous to the JSON Web Token (JWT)
+Bearer Token profile and the SAML 2.0 Bearer Assertion profile. It is
+motivated primarily by workload identity systems, such as SPIFFE/SPIRE
+and Athenz, that already issue software workloads short-lived X.509
+certificates for mutual TLS, and that benefit from using those same
+certificates directly with OAuth 2.0. Unlike a bare bearer credential,
+this profile requires that possession of the private key corresponding
+to the certificate's public key be corroborated as part of every use,
+so that a copy of the certificate alone -- which is not a secret -- is
+never sufficient to obtain a grant or authenticate a client.
 
 
 --- middle
@@ -266,7 +266,7 @@ client_assertion=MIIDXTCCAkWgAwIBAgIJAKrX1234abcd
 ## Referencing the Certificate Presented for Mutual TLS {#thumbprint}
 
 When the client reaches the token endpoint over a mutually authenticated
-TLS {{RFC8446}} connection, the certificate it presented during that TLS
+TLS {{RFC9846}} connection, the certificate it presented during that TLS
 handshake is already available to the authorization server, and
 embedding a full copy of it a second time in the "assertion" or
 "client_assertion" value is unnecessary. In this case, the client MAY
@@ -311,7 +311,8 @@ grant_type=authorization_code&
 code=n0esc3NRze7LTCu7iYzS6a5acc3f0ogp4&
 client_assertion_type=urn%3Aietf%3Aparams%3Aoauth%3A
 client-assertion-type%3Ax509-bearer&
-client_assertion=x5t%23S256%3AkOpPSFiF3aL3tqsXOu72sHNitAB75QQLs6R81Q_yX6g
+client_assertion=x5t%23S256%3AkOpPSFiF3aL3tqsXOu72sHNitAB75QQLs6R81Q
+_yX6g
 ~~~
 
 # X.509 Certificate Format and Processing Requirements {#format}
@@ -406,7 +407,7 @@ policy are at the discretion of the authorization server.
    A. The certificate presented as the "assertion" or "client_assertion"
       value is the same certificate the client presented during mutual
       TLS authentication of the connection to the token endpoint, per
-      {{RFC8446}}, thereby directly proving possession as part of the TLS
+      {{RFC9846}}, thereby directly proving possession as part of the TLS
       handshake; or
 
    B. The certificate was forwarded to the authorization server by a
@@ -661,7 +662,7 @@ credential, can act as a stable identifier that enables correlation of a
 subject's activity across the multiple relying parties the certificate is
 presented to. To prevent disclosure of such information to unintended
 parties, an X.509 Bearer Certificate should only be transmitted over
-encrypted channels, such as those provided by TLS {{RFC8446}}.
+encrypted channels, such as those provided by TLS {{RFC9846}}.
 
 Deployments should determine the minimum amount of information necessary
 in the Subject field and subjectAltName extension to complete the
